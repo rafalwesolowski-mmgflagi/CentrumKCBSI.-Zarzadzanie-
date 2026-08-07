@@ -1,0 +1,49 @@
+name: Deploy Supabase Edge Functions
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "supabase/functions/**"
+      - "supabase/config.toml"
+      - ".github/workflows/deploy-supabase-functions.yml"
+
+jobs:
+  deploy-functions:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      ANTHROPIC_MODEL: ${{ secrets.ANTHROPIC_MODEL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF"
+
+      - name: Set Edge Function secrets
+        run: |
+          supabase secrets set ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY"
+          supabase secrets set ANTHROPIC_MODEL="${ANTHROPIC_MODEL:-claude-sonnet-4-20250514}"
+
+      - name: Deploy ai-quick-add
+        run: supabase functions deploy ai-quick-add
+
+      - name: Deploy ai-portfolio-scan
+        run: supabase functions deploy ai-portfolio-scan
+
+      - name: Deploy portfolio-api
+        run: supabase functions deploy portfolio-api
+
+      - name: Deploy centrum-mcp
+        run: supabase functions deploy centrum-mcp

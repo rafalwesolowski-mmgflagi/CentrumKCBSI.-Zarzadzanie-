@@ -1,0 +1,180 @@
+{
+  "name": "AI Project Hub - Task to Google Calendar",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-project-hub/task-calendar",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "c7f92615-a03f-4f9c-b8e7-2be0fae0a001",
+      "name": "Receive task from AI Project Hub",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        260,
+        300
+      ],
+      "webhookId": "ai-project-hub-task-calendar"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body ?? $json ?? {};\nconst calendar = body.calendar ?? {};\nconst task = body.task ?? {};\n\nconst missing = [];\nif (body.eventType !== 'task.calendar_request') missing.push('eventType');\nif (!body.requestId) missing.push('requestId');\nif (!calendar.title) missing.push('calendar.title');\nif (!calendar.date) missing.push('calendar.date');\nif (!calendar.endDate) missing.push('calendar.endDate');\n\nconst datePattern = /^\\d{4}-\\d{2}-\\d{2}$/;\nconst invalid = [];\nif (calendar.date && !datePattern.test(calendar.date)) invalid.push('calendar.date must be YYYY-MM-DD');\nif (calendar.endDate && !datePattern.test(calendar.endDate)) invalid.push('calendar.endDate must be YYYY-MM-DD');\nif (datePattern.test(calendar.date ?? '') && datePattern.test(calendar.endDate ?? '') && calendar.endDate <= calendar.date) {\n  invalid.push('calendar.endDate must be after calendar.date for all-day Google events');\n}\n\nif (missing.length || invalid.length) {\n  const details = [...missing.map((field) => `missing ${field}`), ...invalid].join(', ');\n  throw new Error(`Invalid AI Project Hub payload: ${details}`);\n}\n\nreturn [{\n  json: {\n    requestId: body.requestId,\n    source: body.source ?? 'ai-project-hub',\n    user: body.user ?? null,\n    task,\n    project: body.project ?? null,\n    calendar: {\n      title: String(calendar.title).trim(),\n      date: calendar.date,\n      endDate: calendar.endDate,\n      allDay: calendar.allDay !== false,\n      timezone: calendar.timezone ?? 'Europe/Oslo',\n      description: calendar.description ?? ''\n    }\n  }\n}];"
+      },
+      "id": "045dfad2-a3b4-47d4-a97c-73a0b9f0d004",
+      "name": "Validate AI Project Hub payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "event",
+        "operation": "create",
+        "calendar": {
+          "__rl": true,
+          "value": "primary",
+          "mode": "id"
+        },
+        "start": "={{ $json.calendar.date }}",
+        "end": "={{ $json.calendar.endDate }}",
+        "useDefaultReminders": true,
+        "additionalFields": {
+          "allday": "={{ $json.calendar.allDay ? 'yes' : 'no' }}",
+          "description": "={{ $json.calendar.description }}",
+          "sendUpdates": "none",
+          "summary": "={{ $json.calendar.title }}"
+        }
+      },
+      "id": "3fb9da54-b962-4f79-856c-a907b1e2d002",
+      "name": "Create Google Calendar event",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        780,
+        300
+      ],
+      "notesInFlow": true,
+      "notes": "Required before running: open this node and select or create your own Google Calendar OAuth2 credential. The workflow cannot execute while this node has no valid credential. If your n8n version uses different field names, map summary/title, description, start date, end date and all-day in the node UI."
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, workflow: 'n8n-google-calendar', requestId: $('Validate AI Project Hub payload').item.json.requestId, calendarEventId: $json.id, htmlLink: $json.htmlLink ?? null } }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "79fb680d-d32d-422a-a6be-33e395550003",
+      "name": "Respond to AI Project Hub",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1080,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Receive task from AI Project Hub": {
+      "main": [
+        [
+          {
+            "node": "Validate AI Project Hub payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate AI Project Hub payload": {
+      "main": [
+        [
+          {
+            "node": "Create Google Calendar event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Google Calendar event": {
+      "main": [
+        [
+          {
+            "node": "Respond to AI Project Hub",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {
+    "Receive task from AI Project Hub": [
+      {
+        "json": {
+          "headers": {},
+          "params": {},
+          "query": {},
+          "body": {
+            "eventType": "task.calendar_request",
+            "requestId": "00000000-0000-0000-0000-000000000000",
+            "sentAt": "2026-05-02T10:00:00.000Z",
+            "source": "ai-project-hub",
+            "user": {
+              "id": "00000000-0000-0000-0000-000000000000",
+              "email": "user@example.com"
+            },
+            "task": {
+              "id": "00000000-0000-0000-0000-000000000001",
+              "name": "Example task",
+              "status": "backlog",
+              "dueDate": "2026-05-02",
+              "priority": "high",
+              "impact": "strategic",
+              "deadlineImportance": 18,
+              "riskStatus": "watch",
+              "area": "Operations",
+              "assignee": "Michał",
+              "notes": "Example note",
+              "recurrence": null
+            },
+            "project": {
+              "id": "00000000-0000-0000-0000-000000000002",
+              "name": "AI Project Hub",
+              "color": "#57c7ff"
+            },
+            "calendar": {
+              "title": "Example task",
+              "date": "2026-05-02",
+              "endDate": "2026-05-03",
+              "allDay": true,
+              "timezone": "Europe/Oslo",
+              "description": "Projekt: AI Project Hub\nObszar: Operations\nWykonawca: Michał\nPriorytet: high\nWpływ: strategic\nRyzyko: watch\nNotatka: Example note"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "AI Project Hub"
+    },
+    {
+      "name": "Google Calendar"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2026-05-02T00:00:00.000Z",
+  "versionId": "1"
+}

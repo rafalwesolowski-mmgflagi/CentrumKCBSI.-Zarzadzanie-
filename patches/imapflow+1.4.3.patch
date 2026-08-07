@@ -1,0 +1,25 @@
+diff --git a/node_modules/imapflow/lib/logger.js b/node_modules/imapflow/lib/logger.js
+index d0565a6..c05837b 100644
+--- a/node_modules/imapflow/lib/logger.js
++++ b/node_modules/imapflow/lib/logger.js
+@@ -1,5 +1,18 @@
+ 'use strict';
+ 
+-const logger = require('pino')();
+-logger.level = 'trace';
++function noop() {}
++
++const logger = {
++    level: 'silent',
++    trace: noop,
++    debug: noop,
++    info: noop,
++    warn: noop,
++    error: noop,
++    fatal: noop,
++    child() {
++        return logger;
++    }
++};
++
+ module.exports = logger;
