@@ -1,5 +1,6 @@
 import { FormEvent, useMemo, useState } from "react";
-import { Check, Download, GitBranch, Globe, Mail, Pencil, Phone, Plus, Trash2, X } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Check, Download, GitBranch, Globe, Mail, Pencil, Phone, Plus, Trash2, Users, X } from "lucide-react";
 import type { AppContextValue } from "../lib/appContext";
 import { exportCsv } from "../lib/exportCsv";
 import type { CRMClient, CRMClientStage } from "../lib/types";
@@ -192,10 +193,16 @@ export function CRMPage({ context }: { context: AppContextValue }) {
           <h1>CRM</h1>
           <p className="page-subtitle">Klienci, kontakty i follow-upy przypisane do projektów</p>
         </div>
-        <button className="secondary-button" onClick={exportToCsv}>
-          <Download size={16} />
-          Eksportuj CSV
-        </button>
+        <div className="crm-header-actions">
+          <Link className="secondary-button" to="/crm/contacts">
+            <Users size={16} />
+            Osoby kontaktowe
+          </Link>
+          <button className="secondary-button" onClick={exportToCsv}>
+            <Download size={16} />
+            Eksportuj CSV
+          </button>
+        </div>
       </header>
 
       <div className="crm-summary-grid">
@@ -336,7 +343,7 @@ export function CRMPage({ context }: { context: AppContextValue }) {
                 <tr key={client.id}>
                   <td>
                     <div className="crm-client-cell">
-                      <strong>{client.company}</strong>
+                      <Link to={`/crm/client/${client.id}`} className="crm-client-card-link"><strong>{client.company}</strong></Link>
                       {client.contact_name && <span>{client.contact_name}</span>}
                       {(client.project_url || client.repository_url) && (
                         <div className="crm-client-links">

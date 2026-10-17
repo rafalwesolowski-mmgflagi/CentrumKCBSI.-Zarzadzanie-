@@ -11,6 +11,8 @@ import { BusinessDesignerPage } from "./pages/BusinessDesignerPage";
 import { CalendarPage } from "./pages/CalendarPage";
 import { CentrumGuidePage } from "./pages/CentrumGuidePage";
 import { CRMPage } from "./pages/CRMPage";
+import { CRMClientCardPage } from "./pages/CRMClientCardPage";
+import { CRMContactsPage } from "./pages/CRMContactsPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { DeclutteringPage } from "./pages/DeclutteringPage";
 import { EmailPage } from "./pages/EmailPage";
@@ -155,6 +157,8 @@ export function App() {
             <Route path="/social-plan" element={<SocialPlannerPage />} />
             <Route path="/project/:id" element={<ProjectPage context={context} />} />
             <Route path="/crm" element={<CRMPage context={context} />} />
+            <Route path="/crm/client/:id" element={<CRMClientCardPage context={context} />} />
+            <Route path="/crm/contacts" element={<CRMContactsPage context={context} />} />
             <Route path="/finance" element={<FinancePage context={context} />} />
             <Route path="/time-blocks" element={<TimeBlocksPage />} />
             <Route path="/wellbeing" element={<WellbeingPage context={context} />} />
