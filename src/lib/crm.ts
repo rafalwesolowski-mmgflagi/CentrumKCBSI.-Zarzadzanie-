@@ -19,6 +19,11 @@ export type CRMActivityKind =
 export type CRMActivityStatus = "open" | "done";
 export type CRMActivityDirection = "in" | "out";
 
+export interface CRMDeliveryAddress {
+  label: string;
+  address: string;
+}
+
 export interface CRMClientDetails {
   id: string;
   user_id: string;
@@ -39,6 +44,9 @@ export interface CRMClientDetails {
   bank_account: string | null;
   next_contact_reminder: string | null;
   invoice_note: string | null;
+  cc_emails: string[];
+  reminder_language: string | null;
+  delivery_addresses: CRMDeliveryAddress[];
   created_at: string;
   updated_at: string;
 }
@@ -124,6 +132,13 @@ export const DEFAULT_PINNED_KINDS: CRMActivityKind[] = ["file", "email", "note",
 
 export const PRICE_GROUPS = ["A", "B", "C", "D", "E"];
 
+export const REMINDER_LANGUAGES: Array<{ value: string; label: string }> = [
+  { value: "pl", label: "polski" },
+  { value: "en", label: "angielski" },
+  { value: "fr", label: "francuski" },
+  { value: "de", label: "niemiecki" }
+];
+
 export const CONTACT_STATUSES = ["Aktywny", "Decydent", "Księgowość", "Zaopatrzenie", "Nieaktywny"];
 
 export function activityVerb(activity: Pick<CRMActivity, "kind" | "direction">) {
@@ -159,9 +174,22 @@ export function normalizeClientDetails(value: unknown): CRMClientDetails | null 
     bank_account: text(row.bank_account),
     next_contact_reminder: text(row.next_contact_reminder),
     invoice_note: text(row.invoice_note),
+    cc_emails: textList(row.cc_emails),
+    reminder_language: text(row.reminder_language),
+    delivery_addresses: normalizeAddresses(row.delivery_addresses),
     created_at: text(row.created_at) ?? new Date().toISOString(),
     updated_at: text(row.updated_at) ?? new Date().toISOString()
   };
+}
+
+function normalizeAddresses(value: unknown): CRMDeliveryAddress[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => {
+      const row = isRecord(item) ? item : {};
+      return { label: text(row.label) ?? "", address: text(row.address) ?? "" };
+    })
+    .filter((item) => item.label || item.address);
 }
 
 export function normalizeContacts(value: unknown): CRMContact[] {
@@ -257,7 +285,7 @@ export function isMissingSchemaError(error: unknown) {
 }
 
 export const MIGRATION_HINT =
-  "Brakuje tabel karty klienta. Uruchom migrację supabase/migrations/202610170001_crm_client_card.sql (supabase db push).";
+  "Brakuje tabel lub pól karty klienta. Uruchom migracje supabase/migrations/202610170001_crm_client_card.sql oraz 202610220001_crm_client_card_delivery.sql (supabase db push).";
 
 export function formatDateTime(iso: string) {
   const date = new Date(iso);

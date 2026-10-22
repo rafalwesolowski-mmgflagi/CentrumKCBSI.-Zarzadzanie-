@@ -10932,3 +10932,35 @@ th { color: #9ba4b5; font-weight: 600; }
     margin-left: 0;
   }
 }
+
+/* CRM: adresy dostawy na karcie klienta */
+:root[data-theme] .crm-address-list {
+  display: grid;
+  gap: 8px;
+}
+
+:root[data-theme] .crm-address-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto;
+  gap: 6px;
+  align-items: center;
+}
+
+:root[data-theme] .crm-address-empty {
+  margin: 0;
+}
+
+:root[data-theme] .crm-address-add {
+  justify-self: start;
+  min-height: 36px;
+}
+
+@media (max-width: 700px) {
+  :root[data-theme] .crm-address-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  :root[data-theme] .crm-address-row input:first-child {
+    grid-column: 1 / -1;
+  }
+}

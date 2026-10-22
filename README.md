@@ -14,8 +14,8 @@ A web-based project management application with an AI Copilot, built with React,
 - **Workload** — per-assignee workload summary across active projects
 - **Mind Map** — interactive visual map of project relationships
 - **CRM** — client relationship view for project customers, with contact details, stage, pipeline value, next follow-up, notes, and Excel export
-- **CRM client card** (`/crm/client/:id`) — full customer card: company details (website, address, NIP, price group, bank account, next contact date and reminder, invoice note), contact people, and an activity timeline with tabs for files, e-mails, notes, sales opportunities, invoices, offers, orders, warehouse documents, reminders, calls, meetings and change history; tabs can be pinned or hidden; previous/next client navigation
-- **CRM contacts** (`/crm/contacts`) — all contact people across clients with search, position and client filters, sorting, multi-select, copy e-mails and CSV export. Requires migration `202610170001_crm_client_card.sql`
+- **CRM client card** (`/crm/client/:id`) — full customer card: company details (website, address, NIP, price group, bank account, next contact date and reminder, invoice note, CC e-mails, reminder language, delivery addresses), contact people, and an activity timeline with tabs for files, e-mails, notes, sales opportunities, invoices, offers, orders, warehouse documents, reminders, calls, meetings and change history; tabs can be pinned or hidden; previous/next client navigation
+- **CRM contacts** (`/crm/contacts`) — all contact people across clients with search, position and client filters, sorting, multi-select, copy e-mails and CSV export. Requires migrations `202610170001_crm_client_card.sql` and `202610220001_crm_client_card_delivery.sql`
 
 ### Business Designer
 - **Business Canvas** — 10-section lean canvas (Customer Segments, Problem, Solution, Unique Value, Channels, Revenue, Costs, Key Metrics, Advantage, Experiments)

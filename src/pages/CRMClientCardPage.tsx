@@ -30,6 +30,7 @@ import {
   DEFAULT_PINNED_KINDS,
   MIGRATION_HINT,
   PRICE_GROUPS,
+  REMINDER_LANGUAGES,
   activityVerb,
   errorText,
   formatAmount,
@@ -46,7 +47,8 @@ import {
   type CRMActivity,
   type CRMActivityKind,
   type CRMClientDetails,
-  type CRMContact
+  type CRMContact,
+  type CRMDeliveryAddress
 } from "../lib/crm";
 
 type TabKey = "timeline" | CRMActivityKind;
@@ -64,6 +66,9 @@ interface ClientFields {
   nextFollowUp: string;
   nextContactReminder: string;
   invoiceNote: string;
+  ccEmails: string;
+  reminderLanguage: string;
+  deliveryAddresses: CRMDeliveryAddress[];
 }
 
 interface ContactFields {
@@ -111,8 +116,18 @@ const FIELD_LABELS: Record<keyof ClientFields, string> = {
   stage: "Etap",
   nextFollowUp: "Data następnego kontaktu",
   nextContactReminder: "Przypomnienie",
-  invoiceNote: "Notatka"
+  invoiceNote: "Notatka",
+  ccEmails: "Do wiadomości (CC)",
+  reminderLanguage: "Język przypomnień",
+  deliveryAddresses: "Adresy dostawy"
 };
+
+function displayValue(value: ClientFields[keyof ClientFields]) {
+  if (Array.isArray(value)) {
+    return value.map((item) => [item.label, item.address].filter(Boolean).join(": ")).join(" | ") || "—";
+  }
+  return value || "—";
+}
 
 const CURRENCIES = ["PLN", "EUR", "USD", "GBP", "CHF", "NOK"];
 const PINNED_STORAGE_KEY = "centrum-crm-card-tabs";
@@ -135,7 +150,10 @@ function fieldsFromClient(client: CRMClientDetails): ClientFields {
     stage: client.stage,
     nextFollowUp: client.next_follow_up ?? "",
     nextContactReminder: toDatetimeLocal(client.next_contact_reminder),
-    invoiceNote: client.invoice_note ?? ""
+    invoiceNote: client.invoice_note ?? "",
+    ccEmails: client.cc_emails.join(", "),
+    reminderLanguage: client.reminder_language ?? "pl",
+    deliveryAddresses: client.delivery_addresses.map((item) => ({ ...item }))
   };
 }
 
@@ -283,6 +301,27 @@ export function CRMClientCardPage({ context }: { context: AppContextValue }) {
     setFields((current) => current ? { ...current, [key]: value } : current);
   }
 
+  function updateAddress(index: number, patch: Partial<CRMDeliveryAddress>) {
+    setFields((current) => current ? {
+      ...current,
+      deliveryAddresses: current.deliveryAddresses.map((item, i) => i === index ? { ...item, ...patch } : item)
+    } : current);
+  }
+
+  function addAddress() {
+    setFields((current) => current ? {
+      ...current,
+      deliveryAddresses: [...current.deliveryAddresses, { label: "", address: "" }]
+    } : current);
+  }
+
+  function removeAddress(index: number) {
+    setFields((current) => current ? {
+      ...current,
+      deliveryAddresses: current.deliveryAddresses.filter((_, i) => i !== index)
+    } : current);
+  }
+
   function pinTab(kind: CRMActivityKind) {
     const next = ACTIVITY_KIND_ORDER.filter((item) => item === kind || pinned.includes(item));
     setPinned(next);
@@ -312,7 +351,7 @@ export function CRMClientCardPage({ context }: { context: AppContextValue }) {
     setSaving(true);
     setMessage(null);
     const before = fieldsFromClient(client);
-    const changed = (Object.keys(FIELD_LABELS) as Array<keyof ClientFields>).filter((key) => before[key] !== fields[key]);
+    const changed = (Object.keys(FIELD_LABELS) as Array<keyof ClientFields>).filter((key) => JSON.stringify(before[key]) !== JSON.stringify(fields[key]));
     try {
       const { error } = await supabase.from("crm_clients").update({
         company,
@@ -327,6 +366,11 @@ export function CRMClientCardPage({ context }: { context: AppContextValue }) {
         next_follow_up: optionalText(fields.nextFollowUp),
         next_contact_reminder: fromDatetimeLocal(fields.nextContactReminder),
         invoice_note: optionalText(fields.invoiceNote),
+        cc_emails: splitList(fields.ccEmails),
+        reminder_language: optionalText(fields.reminderLanguage),
+        delivery_addresses: fields.deliveryAddresses
+          .map((item) => ({ label: item.label.trim(), address: item.address.trim() }))
+          .filter((item) => item.label || item.address),
         updated_at: new Date().toISOString()
       }).eq("id", client.id);
       if (error) {
@@ -340,7 +384,7 @@ export function CRMClientCardPage({ context }: { context: AppContextValue }) {
           client_id: client.id,
           kind: "change",
           title: `Zmieniono: ${changed.map((key) => FIELD_LABELS[key]).join(", ")}`,
-          body: changed.map((key) => `${FIELD_LABELS[key]}: ${before[key] || "—"} → ${fields[key] || "—"}`).join("\n")
+          body: changed.map((key) => `${FIELD_LABELS[key]}: ${displayValue(before[key])} → ${displayValue(fields[key])}`).join("\n")
         });
       }
       setMessage("Karta klienta zapisana.");
@@ -583,6 +627,32 @@ export function CRMClientCardPage({ context }: { context: AppContextValue }) {
                 <span>Przypomnij o dacie nast. kontaktu</span>
                 <input type="datetime-local" value={fields.nextContactReminder} onChange={(event) => updateField("nextContactReminder", event.target.value)} />
               </label>
+              <label className="crm-field wide">
+                <span>Do wiadomości (CC, po przecinku)</span>
+                <input value={fields.ccEmails} onChange={(event) => updateField("ccEmails", event.target.value)} placeholder="np. ksiegowosc@firma.pl, szef@firma.pl" />
+              </label>
+              <label className="crm-field wide">
+                <span>Język przypomnień</span>
+                <select value={fields.reminderLanguage} onChange={(event) => updateField("reminderLanguage", event.target.value)}>
+                  {REMINDER_LANGUAGES.map((language) => <option key={language.value} value={language.value}>{language.label}</option>)}
+                </select>
+              </label>
+              <div className="crm-field wide">
+                <span>Adresy dostawy</span>
+                {!fields.deliveryAddresses.length && <p className="muted-note crm-address-empty">Brak adresów.</p>}
+                <div className="crm-address-list">
+                  {fields.deliveryAddresses.map((item, index) => (
+                    <div className="crm-address-row" key={index}>
+                      <input value={item.label} onChange={(event) => updateAddress(index, { label: event.target.value })} placeholder="Nazwa, np. Magazyn" aria-label="Nazwa adresu" />
+                      <input value={item.address} onChange={(event) => updateAddress(index, { address: event.target.value })} placeholder="Ulica, kod, miasto, kraj" aria-label="Adres dostawy" />
+                      <button type="button" className="icon-button danger-action" onClick={() => removeAddress(index)} aria-label="Usuń adres"><Trash2 size={15} /></button>
+                    </div>
+                  ))}
+                </div>
+                <button type="button" className="secondary-button crm-address-add" onClick={addAddress}>
+                  <Plus size={15} /> Dodaj adres
+                </button>
+              </div>
               <label className="crm-field wide">
                 <span>Notatka (np. faktury na)</span>
                 <textarea value={fields.invoiceNote} onChange={(event) => updateField("invoiceNote", event.target.value)} placeholder="FAKTURY NA: ksiegowosc@firma.pl" rows={2} />
